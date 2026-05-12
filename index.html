@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cisco ACL Lab — Network Training Simulator</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f6f8;--bg2:#ffffff;--bg3:#f0f2f5;--bg4:#e8eaed;
+  --border:#dde1e7;--border2:#c8cdd5;
+  --text:#1a1d23;--text2:#4a5568;--text3:#8a93a2;
+  --blue:#1a6fc4;--blue2:#1557a0;--blue3:#e8f0fb;--blue4:#d0e2f7;
+  --green:#16a34a;--green2:#dcfce7;--green3:#bbf7d0;
+  --red:#dc2626;--red2:#fee2e2;--red3:#fecaca;
+  --amber:#d97706;--amber2:#fef3c7;
+  --cyan:#0891b2;--cyan2:#cffafe;
+  --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.05);
+  --shadow2:0 4px 12px rgba(0,0,0,.1);
+  --font:'Segoe UI',system-ui,-apple-system,sans-serif;
+  --mono:'Consolas','Courier New',monospace;
+  --radius:6px;--radius2:10px;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13px;line-height:1.5;height:100vh;overflow:hidden;display:flex;flex-direction:column}
+
+/* Header */
+.hdr{background:var(--blue2);color:#fff;padding:0 16px;display:flex;align-items:center;gap:12px;height:48px;flex-shrink:0;box-shadow:var(--shadow2)}
+.hdr-logo{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;letter-spacing:.5px}
+.hdr-logo i{font-size:20px;opacity:.9}
+.hdr-sep{width:1px;height:20px;background:rgba(255,255,255,.25)}
+.hdr-sub{font-size:12px;opacity:.75;letter-spacing:.3px}
+.hdr-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.hdr-btn{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;padding:5px 10px;border-radius:var(--radius);font-size:11px;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .15s;font-family:var(--font)}
+.hdr-btn:hover{background:rgba(255,255,255,.22)}
+.hdr-clock{font-size:12px;opacity:.7;font-family:var(--mono)}
+
+/* Layout */
+.main{display:grid;grid-template-columns:380px 1fr;flex:1;overflow:hidden;gap:0}
+.left-col{display:flex;flex-direction:column;background:var(--bg2);border-right:1px solid var(--border);overflow:hidden}
+.right-col{display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+
+/* Tabs */
+.tab-bar{display:flex;background:var(--bg3);border-bottom:1px solid var(--border);flex-shrink:0;padding:0 4px}
+.tab{padding:9px 14px;font-size:12px;font-weight:500;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;display:flex;align-items:center;gap:5px;user-select:none}
+.tab:hover{color:var(--blue)}
+.tab.on{color:var(--blue);border-bottom-color:var(--blue);background:var(--bg2)}
+.tab i{font-size:14px}
+
+/* Panel sections */
+.section{padding:12px;border-bottom:1px solid var(--border)}
+.section-title{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:8px;display:flex;align-items:center;gap:5px}
+.section-title i{font-size:13px}
+
+/* ACL type tabs */
+.type-tabs{display:flex;gap:4px;margin-bottom:10px}
+.type-tab{flex:1;padding:5px;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);font-size:11px;font-weight:500;cursor:pointer;border-radius:var(--radius);transition:all .15s;text-align:center;font-family:var(--font)}
+.type-tab:hover{border-color:var(--blue);color:var(--blue)}
+.type-tab.on{background:var(--blue3);border-color:var(--blue);color:var(--blue);font-weight:600}
+
+/* ACE list */
+.ace-list{flex:1;overflow-y:auto;padding:8px 12px}
+.ace-item{display:grid;grid-template-columns:28px 70px 1fr 1fr 70px 20px;gap:3px;align-items:center;padding:6px 8px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:4px;cursor:grab;transition:all .15s;border-left:3px solid var(--border2)}
+.ace-item:hover{box-shadow:var(--shadow);border-color:var(--border2)}
+.ace-item.dragging{opacity:.4}
+.ace-item.drag-over{border-top:2px solid var(--blue)}
+.ace-item.permit-rule{border-left-color:var(--green)}
+.ace-item.deny-rule{border-left-color:var(--red)}
+.ace-item.shadowed{opacity:.55;background:repeating-linear-gradient(45deg,var(--bg2),var(--bg2) 4px,var(--bg3) 4px,var(--bg3) 8px)}
+.ace-item.flash-match{animation:flashmatch .5s}
+@keyframes flashmatch{0%{background:var(--blue3)}100%{background:var(--bg2)}}
+.seq{font-size:10px;color:var(--text3);text-align:center;font-family:var(--mono)}
+.abadge{text-align:center;padding:2px 5px;border-radius:3px;font-size:10px;font-weight:700;letter-spacing:.3px}
+.abadge.permit{background:var(--green2);color:var(--green)}
+.abadge.deny{background:var(--red2);color:var(--red)}
+.afield{font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--mono)}
+.afield.muted{color:var(--text3)}
+.xbtn{background:none;border:none;color:var(--text3);cursor:pointer;width:18px;height:18px;display:flex;align-items:center;justify-content:center;border-radius:3px;transition:all .15s;font-size:12px}
+.xbtn:hover{background:var(--red2);color:var(--red)}
+.shadow-warn{font-size:9px;color:var(--amber);grid-column:1/-1;padding:0 2px;display:flex;align-items:center;gap:3px}
+
+/* Add form */
+.add-form{background:var(--bg3);border:1px solid var(--blue4);border-radius:var(--radius2);padding:10px;margin:0 12px 8px;display:none}
+.add-form.show{display:block}
+.fgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:6px}
+.flabel{font-size:10px;font-weight:600;color:var(--text2);margin-bottom:3px;letter-spacing:.3px}
+select,input[type=text]{width:100%;background:var(--bg2);border:1px solid var(--border2);color:var(--text);font-family:var(--mono);font-size:12px;padding:5px 8px;border-radius:var(--radius);outline:none;transition:border-color .15s}
+select:focus,input[type=text]:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue3)}
+.fbtns{display:flex;gap:6px;margin-top:4px}
+
+/* Buttons */
+.btn{padding:6px 14px;border-radius:var(--radius);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;font-family:var(--font);display:inline-flex;align-items:center;gap:5px}
+.btn-primary{background:var(--blue);border:1px solid var(--blue2);color:#fff}
+.btn-primary:hover{background:var(--blue2)}
+.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--text2)}
+.btn-ghost:hover{border-color:var(--blue);color:var(--blue)}
+.btn-sm{padding:4px 10px;font-size:11px}
+.btn-danger{background:var(--red2);border:1px solid var(--red3);color:var(--red)}
+.btn-danger:hover{background:var(--red3)}
+
+/* Implicit deny */
+.implicit{display:flex;align-items:center;gap:6px;padding:5px 8px;border:1px dashed var(--red3);border-radius:var(--radius);color:var(--red);font-size:11px;margin:0 12px 8px;background:var(--red2);opacity:.8}
+
+/* Stats bar */
+.statsbar{display:flex;gap:16px;padding:6px 12px;background:var(--bg3);border-top:1px solid var(--border);flex-shrink:0;font-size:11px}
+.stat-item{display:flex;align-items:center;gap:4px;color:var(--text2)}
+.stat-val{font-weight:700;color:var(--text)}
+.stat-val.green{color:var(--green)}
+.stat-val.red{color:var(--red)}
+.stat-val.amber{color:var(--amber)}
+
+/* Simulator */
+.sim-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.result-box{padding:10px 14px;border-radius:var(--radius);display:flex;align-items:center;gap:10px;font-size:13px;font-weight:500;border:1px solid var(--border);background:var(--bg3);min-height:44px;transition:all .3s}
+.result-box.permit{background:var(--green2);border-color:var(--green3);color:var(--green)}
+.result-box.deny{background:var(--red2);border-color:var(--red3);color:var(--red)}
+.result-box i{font-size:20px}
+.trace{margin-top:8px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:8px;max-height:140px;overflow-y:auto;font-family:var(--mono);font-size:11px;line-height:1.8;display:none}
+.tl-check{color:var(--text3)}
+.tl-permit{color:var(--green);font-weight:600}
+.tl-deny{color:var(--red);font-weight:600}
+.tl-info{color:var(--cyan)}
+
+/* Batch test */
+.batch-table{width:100%;border-collapse:collapse;font-size:11px;margin-top:8px}
+.batch-table th{background:var(--bg3);padding:5px 8px;text-align:left;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);font-size:10px;letter-spacing:.5px;text-transform:uppercase}
+.batch-table td{padding:5px 8px;border-bottom:1px solid var(--border);font-family:var(--mono)}
+.batch-table tr:last-child td{border-bottom:none}
+.batch-table tr:hover td{background:var(--bg3)}
+.result-permit{color:var(--green);font-weight:700}
+.result-deny{color:var(--red);font-weight:700}
+.batch-input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:8px;font-family:var(--mono);font-size:11px;resize:vertical;min-height:80px;outline:none;color:var(--text)}
+.batch-input:focus{border-color:var(--blue)}
+
+/* Wildcard */
+.wc-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.wc-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px}
+.wc-label{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.wc-val{font-size:14px;font-weight:700;color:var(--blue);font-family:var(--mono)}
+.bits{display:flex;gap:1px;flex-wrap:wrap;margin-top:6px}
+.bit{width:16px;height:16px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;border-radius:2px}
+.bit.n{background:var(--blue3);color:var(--blue)}
+.bit.h{background:var(--amber2);color:var(--amber)}
+.bsep{width:3px}
+.wc-syntax{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px;font-family:var(--mono);font-size:12px;color:var(--blue);margin-top:8px}
+.shortcut-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:8px}
+.shortcut{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:6px 8px;font-size:11px}
+.shortcut .k{color:var(--blue);font-family:var(--mono);font-weight:600}
+.shortcut .v{color:var(--text3);font-family:var(--mono);font-size:10px}
+
+/* Mistakes panel */
+.mistake{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;margin-bottom:6px;border-left:3px solid var(--amber)}
+.mistake-title{font-weight:600;font-size:12px;color:var(--text);margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.mistake-title i{color:var(--amber);font-size:15px}
+.mistake-desc{font-size:11px;color:var(--text2);line-height:1.6}
+.mistake-code{background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:4px 7px;font-family:var(--mono);font-size:11px;margin-top:5px;color:var(--text)}
+.mistake-fix{font-size:11px;color:var(--green);margin-top:4px;display:flex;align-items:flex-start;gap:5px}
+.mistake-fix i{flex-shrink:0;margin-top:1px}
+
+/* Topology */
+.topo-wrap{flex:1;overflow:hidden;position:relative;background:var(--bg2);margin:10px;border-radius:var(--radius2);border:1px solid var(--border);box-shadow:var(--shadow)}
+#topo-svg{width:100%;height:100%}
+.topo-legend{position:absolute;bottom:10px;left:10px;display:flex;gap:10px;font-size:11px;color:var(--text2)}
+.legend-item{display:flex;align-items:center;gap:4px}
+.legend-dot{width:8px;height:8px;border-radius:50%}
+
+/* Quiz */
+.quiz-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:14px;margin-bottom:8px}
+.quiz-q{font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px;line-height:1.5}
+.quiz-hint{font-size:11px;color:var(--text2);background:var(--blue3);border:1px solid var(--blue4);border-radius:var(--radius);padding:6px 10px;margin-bottom:10px}
+.quiz-opts{display:flex;flex-direction:column;gap:5px}
+.quiz-opt{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;font-size:12px;font-family:var(--mono);cursor:pointer;transition:all .15s;text-align:left}
+.quiz-opt:hover{border-color:var(--blue);background:var(--blue3)}
+.quiz-opt.correct{background:var(--green2);border-color:var(--green);color:var(--green)}
+.quiz-opt.wrong{background:var(--red2);border-color:var(--red);color:var(--red)}
+.quiz-score{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg3);border-radius:var(--radius);font-size:12px;margin-bottom:10px}
+.score-num{font-size:20px;font-weight:700;color:var(--blue)}
+
+/* CLI */
+.cli-box{background:var(--text);border-radius:var(--radius);padding:10px 12px;font-family:var(--mono);font-size:12px;line-height:1.9;overflow-y:auto;flex:1;margin:8px 12px}
+.cl{white-space:pre;display:block}
+.cl-prompt{color:#4ade80}
+.cl-comment{color:#6b7280}
+.cl-keyword{color:#60a5fa}
+.cl-permit{color:#4ade80;font-weight:600}
+.cl-deny{color:#f87171;font-weight:600}
+.cl-num{color:#fbbf24}
+.cl-cursor{display:inline-block;width:8px;height:14px;background:#4ade80;vertical-align:text-bottom;animation:blink .8s step-end infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+/* Scenarios */
+.scenario{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;margin-bottom:6px;cursor:pointer;transition:all .15s;display:flex;gap:10px;border-left:3px solid transparent}
+.scenario:hover{box-shadow:var(--shadow);border-color:var(--border2)}
+.scenario.active{border-left-color:var(--blue);background:var(--blue3)}
+.sc-icon{font-size:22px;color:var(--blue);flex-shrink:0}
+.sc-name{font-size:12px;font-weight:600;color:var(--text);margin-bottom:2px}
+.sc-desc{font-size:11px;color:var(--text2)}
+.sc-tag{font-size:9px;padding:1px 6px;border-radius:10px;margin-top:4px;display:inline-block;font-weight:600;letter-spacing:.3px}
+.sc-tag.std{background:var(--blue3);color:var(--blue)}
+.sc-tag.ext{background:var(--amber2);color:var(--amber)}
+.sc-tag.nm{background:var(--green2);color:var(--green)}
+
+/* Shadow alert */
+.shadow-alert{background:var(--amber2);border:1px solid #fcd34d;border-radius:var(--radius);padding:8px 10px;margin:0 12px 6px;font-size:11px;color:var(--amber);display:none}
+.shadow-alert.show{display:flex;align-items:flex-start;gap:6px}
+
+/* Share toast */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--text);color:#fff;padding:10px 16px;border-radius:var(--radius);font-size:12px;z-index:1000;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text3)}
+
+/* Quick btns */
+.quick-btns{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.qbtn{background:var(--bg3);border:1px solid var(--border);color:var(--text2);padding:3px 8px;border-radius:var(--radius);font-size:10px;cursor:pointer;transition:all .15s;font-family:var(--mono)}
+.qbtn:hover{border-color:var(--blue);color:var(--blue);background:var(--blue3)}
+
+/* Named ACL input */
+#named-row{display:none;margin-bottom:8px;padding:0 12px}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-logo"><i class="ti ti-router"></i> Cisco ACL Lab</div>
+  <div class="hdr-sep"></div>
+  <div class="hdr-sub">Access Control List Training Simulator</div>
+  <div class="hdr-right">
+    <button class="hdr-btn" onclick="shareACL()"><i class="ti ti-share"></i> Share</button>
+    <button class="hdr-btn" onclick="copyConfig()"><i class="ti ti-copy"></i> Copy IOS Config</button>
+    <div class="hdr-clock" id="clock">--:--:--</div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- LEFT COLUMN -->
+  <div class="left-col">
+    <div class="tab-bar">
+      <div class="tab on" onclick="leftTab('editor',this)"><i class="ti ti-list-check"></i> ACL Editor</div>
+      <div class="tab" onclick="leftTab('cli',this)"><i class="ti ti-terminal-2"></i> IOS CLI</div>
+      <div class="tab" onclick="leftTab('scenarios',this)"><i class="ti ti-book-2"></i> Scenarios</div>
+      <div class="tab" onclick="leftTab('mistakes',this)"><i class="ti ti-alert-triangle"></i> Mistakes</div>
+    </div>
+
+    <!-- EDITOR TAB -->
+    <div id="lt-editor" style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+      <div class="section">
+        <div class="type-tabs">
+          <button class="type-tab on" onclick="setType('standard',this)">Standard (1–99)</button>
+          <button class="type-tab" onclick="setType('extended',this)">Extended (100–199)</button>
+          <button class="type-tab" onclick="setType('named',this)">Named</button>
+        </div>
+        <div id="named-row" style="padding:0;margin-bottom:0">
+          <div class="flabel">ACL Name</div>
+          <input type="text" id="acl-name" placeholder="e.g. PERMIT_WEB" oninput="updateCLI()">
+        </div>
+      </div>
+
+      <div id="shadow-alert" class="shadow-alert">
+        <i class="ti ti-alert-triangle" style="font-size:15px;flex-shrink:0;margin-top:1px"></i>
+        <span id="shadow-msg">Some rules are shadowed and will never match.</span>
+      </div>
+
+      <div class="ace-list" id="ace-list"></div>
+      <div class="implicit"><i class="ti ti-lock" style="font-size:13px"></i> Implicit <strong>deny any any</strong> at end of every ACL</div>
+
+      <div id="add-form" class="add-form">
+        <div class="fgrid">
+          <div><div class="flabel">Action</div><select id="f-action"><option value="permit">permit</option><option value="deny">deny</option></select></div>
+          <div id="fw-proto"><div class="flabel">Protocol</div><select id="f-proto"><option value="ip">ip</option><option value="tcp">tcp</option><option value="udp">udp</option><option value="icmp">icmp</option></select></div>
+          <div><div class="flabel">Remark</div><input type="text" id="f-remark" placeholder="optional"></div>
+        </div>
+        <div class="fgrid">
+          <div><div class="flabel">Src Address</div><input type="text" id="f-src" value="any"></div>
+          <div id="fw-srcwc"><div class="flabel">Src Wildcard</div><input type="text" id="f-srcwc" placeholder="0.0.0.255"></div>
+          <div id="fw-sport"><div class="flabel">Src Port</div><select id="f-sport"><option value="">any</option><option value="eq 22">eq 22 (ssh)</option><option value="eq 23">eq 23 (telnet)</option><option value="eq 80">eq 80 (http)</option><option value="eq 443">eq 443 (https)</option><option value="gt 1023">gt 1023</option></select></div>
+        </div>
+        <div class="fgrid">
+          <div id="fw-dst"><div class="flabel">Dst Address</div><input type="text" id="f-dst" value="any"></div>
+          <div id="fw-dstwc"><div class="flabel">Dst Wildcard</div><input type="text" id="f-dstwc" placeholder="0.0.0.255"></div>
+          <div id="fw-dport"><div class="flabel">Dst Port</div><select id="f-dport"><option value="">any</option><option value="eq 80">eq 80 (http)</option><option value="eq 443">eq 443 (https)</option><option value="eq 22">eq 22 (ssh)</option><option value="eq 23">eq 23 (telnet)</option><option value="eq 21">eq 21 (ftp)</option><option value="eq 53">eq 53 (dns)</option><option value="eq 25">eq 25 (smtp)</option><option value="eq 3389">eq 3389 (rdp)</option></select></div>
+        </div>
+        <div class="fbtns">
+          <button class="btn btn-primary btn-sm" onclick="addACE()"><i class="ti ti-plus"></i> Add</button>
+          <button class="btn btn-ghost btn-sm" onclick="toggleForm()">Cancel</button>
+        </div>
+      </div>
+
+      <div class="section" style="padding:8px 12px;display:flex;gap:6px;flex-shrink:0">
+        <button class="btn btn-primary btn-sm" onclick="toggleForm()"><i class="ti ti-plus"></i> Add ACE</button>
+        <button class="btn btn-ghost btn-sm" onclick="clearACL()"><i class="ti ti-trash"></i> Clear</button>
+      </div>
+
+      <div class="statsbar">
+        <div class="stat-item">Rules: <span class="stat-val" id="st-aces">0</span></div>
+        <div class="stat-item">Permits: <span class="stat-val green" id="st-permits">0</span></div>
+        <div class="stat-item">Denies: <span class="stat-val red" id="st-denies">0</span></div>
+        <div class="stat-item">Type: <span class="stat-val" id="st-type">Standard</span></div>
+      </div>
+    </div>
+
+    <!-- CLI TAB -->
+    <div id="lt-cli" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+      <div class="cli-box" id="cli-box"></div>
+    </div>
+
+    <!-- SCENARIOS TAB -->
+    <div id="lt-scenarios" style="display:none;flex-direction:column;flex:1;overflow-y:auto;padding:10px">
+      <div id="sc-list"></div>
+    </div>
+
+    <!-- MISTAKES TAB -->
+    <div id="lt-mistakes" style="display:none;flex-direction:column;flex:1;overflow-y:auto;padding:10px">
+      <div class="mistake">
+        <div class="mistake-title"><i class="ti ti-alert-triangle"></i> Forgetting the implicit deny</div>
+        <div class="mistake-desc">Every ACL ends with an invisible <strong>deny any</strong>. If you only add permit rules and forget to consider what gets blocked, everything else is silently dropped.</div>
+        <div class="mistake-code">access-list 10 permit 192.168.1.0 0.0.0.255<br>! Everything else is denied — even your own traffic!</div>
+        <div class="mistake-fix"><i class="ti ti-check"></i> Always add a <strong>permit ip any any</strong> at the end if you want everything else through.</div>
+      </div>
+      <div class="mistake">
+        <div class="mistake-title"><i class="ti ti-alert-triangle"></i> Wrong wildcard mask direction</div>
+        <div class="mistake-desc">Wildcard masks are the <strong>inverse</strong> of subnet masks. A /24 network uses wildcard 0.0.0.255 — not 255.255.255.0. Using the subnet mask instead of the wildcard is one of the most common errors.</div>
+        <div class="mistake-code">! WRONG: access-list 10 permit 192.168.1.0 255.255.255.0<br>! RIGHT: access-list 10 permit 192.168.1.0 0.0.0.255</div>
+        <div class="mistake-fix"><i class="ti ti-check"></i> Subnet mask + Wildcard mask = 255.255.255.255. Use the Wildcard Calc tab to check.</div>
+      </div>
+      <div class="mistake">
+        <div class="mistake-title"><i class="ti ti-alert-triangle"></i> Applying ACL in wrong direction</div>
+        <div class="mistake-desc">Inbound ACLs filter traffic <strong>before</strong> the router processes it. Outbound filters <strong>after</strong>. Applying an inbound ACL when you meant outbound (or vice versa) blocks the wrong traffic.</div>
+        <div class="mistake-code">! Inbound on Gi0/0 — filters before routing<br>ip access-group 100 in<br>! Outbound on Gi0/1 — filters after routing<br>ip access-group 100 out</div>
+        <div class="mistake-fix"><i class="ti ti-check"></i> Standard ACLs should be placed closest to the destination. Extended ACLs closest to the source.</div>
+      </div>
+      <div class="mistake">
+        <div class="mistake-title"><i class="ti ti-alert-triangle"></i> Rule order / shadowing</div>
+        <div class="mistake-desc">ACLs are processed top-down and stop at the first match. A broad permit/deny early in the list can shadow (completely block) more specific rules below it.</div>
+        <div class="mistake-code">10 permit ip any any   ← matches everything!<br>20 deny tcp any any eq 23  ← NEVER reached</div>
+        <div class="mistake-fix"><i class="ti ti-check"></i> Put specific rules before general ones. This simulator highlights shadowed rules in grey.</div>
+      </div>
+      <div class="mistake">
+        <div class="mistake-title"><i class="ti ti-alert-triangle"></i> Standard ACL placed too far from destination</div>
+        <div class="mistake-desc">Standard ACLs only filter on source IP. If placed near the source, they can block traffic to ALL destinations, not just the one you intended.</div>
+        <div class="mistake-code">! Trying to block access to server 10.0.0.5<br>! Standard ACL on Gi0/0 (ingress, near source)<br>! This blocks 192.168.1.0/24 from going ANYWHERE</div>
+        <div class="mistake-fix"><i class="ti ti-check"></i> Place standard ACLs on the interface closest to the destination to limit the blast radius.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT COLUMN -->
+  <div class="right-col">
+    <div class="tab-bar" style="background:var(--bg3);border-bottom:1px solid var(--border)">
+      <div class="tab on" onclick="rightTab('topo',this)"><i class="ti ti-topology-star"></i> Topology</div>
+      <div class="tab" onclick="rightTab('sim',this)"><i class="ti ti-package"></i> Packet Sim</div>
+      <div class="tab" onclick="rightTab('batch',this)"><i class="ti ti-stack"></i> Batch Test</div>
+      <div class="tab" onclick="rightTab('wc',this)"><i class="ti ti-calculator"></i> Wildcard Calc</div>
+    </div>
+
+    <!-- TOPOLOGY -->
+    <div id="rt-topo" style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+      <div class="topo-wrap">
+        <svg id="topo-svg" viewBox="0 0 760 480" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <marker id="arr-g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+              <path d="M1 2L9 5L1 8" fill="none" stroke="#16a34a" stroke-width="1.5" stroke-linecap="round"/>
+            </marker>
+            <marker id="arr-r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+              <path d="M1 2L9 5L1 8" fill="none" stroke="#dc2626" stroke-width="1.5" stroke-linecap="round"/>
+            </marker>
+            <marker id="arr-b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+              <path d="M1 2L9 5L1 8" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+            </marker>
+            <filter id="drop-shadow">
+              <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.1"/>
+            </filter>
+          </defs>
+
+          <!-- Background grid -->
+          <defs>
+            <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
+              <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#e8eaed" stroke-width="0.5"/>
+            </pattern>
+          </defs>
+          <rect width="760" height="480" fill="url(#grid)"/>
+
+          <!-- INTERNET CLOUD -->
+          <g id="node-wan" filter="url(#drop-shadow)">
+            <ellipse cx="380" cy="48" rx="80" ry="28" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+            <ellipse cx="340" cy="44" rx="24" ry="18" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+            <ellipse cx="410" cy="40" rx="20" ry="15" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+            <ellipse cx="380" cy="55" rx="36" ry="20" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+            <text x="380" y="52" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="11" font-weight="600" fill="#475569">INTERNET</text>
+            <text x="380" y="64" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="9" fill="#94a3b8">203.0.113.0/24</text>
+          </g>
+
+          <!-- WAN link -->
+          <line x1="380" y1="76" x2="380" y2="128" stroke="#94a3b8" stroke-width="2" stroke-dasharray="5 3"/>
+          <text x="392" y="107" font-family="'Segoe UI',sans-serif" font-size="9" fill="#94a3b8">Gi0/0</text>
+          <text x="392" y="118" font-family="'Segoe UI',sans-serif" font-size="9" fill="#94a3b8">1 Gbps</text>
+
+          <!-- ACL BADGE on WAN link -->
+          <rect id="acl-badge" x="350" y="92" width="26" height="13" rx="3" fill="#fef3c7" stroke="#fcd34d" stroke-width="1"/>
+          <text x="363" y="102" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="8" font-weight="700" fill="#d97706">ACL ▼</text>
+
+          <!-- EDGE ROUTER -->
+          <g id="node-r1" filter="url(#drop-shadow)">
+            <rect x="310" y="128" width="140" height="58" rx="8" fill="#fff" stroke="#3b82f6" stroke-width="1.5"/>
+            <rect x="310" y="128" width="140" height="20" rx="8" fill="#eff6ff"/>
+            <rect x="310" y="138" width="140" height="10" fill="#eff6ff"/>
+            <!-- router symbol -->
+            <circle cx="336" cy="158" r="11" fill="none" stroke="#3b82f6" stroke-width="1.2"/>
+            <line x1="325" y1="158" x2="347" y2="158" stroke="#3b82f6" stroke-width="1"/>
+            <line x1="336" y1="147" x2="336" y2="169" stroke="#3b82f6" stroke-width="1"/>
+            <line x1="328" y1="150" x2="344" y2="166" stroke="#3b82f6" stroke-width=".7"/>
+            <line x1="344" y1="150" x2="328" y2="166" stroke="#3b82f6" stroke-width=".7"/>
+            <text x="380" y="140" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="10" font-weight="700" fill="#1e40af">R1 — Edge Router</text>
+            <text x="356" y="154" font-family="'Segoe UI',sans-serif" font-size="9" fill="#64748b">Cisco ISR 4451</text>
+            <text x="356" y="165" font-family="'Segoe UI',sans-serif" font-size="9" fill="#64748b">10.0.0.1 / Gi0/0</text>
+            <text x="356" y="178" font-family="'Consolas',monospace" font-size="8" fill="#d97706">▲ ACL applied inbound</text>
+          </g>
+
+          <!-- R1 to FW link -->
+          <line x1="380" y1="186" x2="380" y2="238" stroke="#94a3b8" stroke-width="2" stroke-dasharray="5 3"/>
+          <text x="392" y="216" font-family="'Segoe UI',sans-serif" font-size="9" fill="#94a3b8">Gi0/1</text>
+
+          <!-- FIREWALL -->
+          <g id="node-fw" filter="url(#drop-shadow)">
+            <rect x="308" y="238" width="144" height="52" rx="8" fill="#fff" stroke="#f59e0b" stroke-width="1.5"/>
+            <rect x="308" y="238" width="144" height="18" rx="8" fill="#fffbeb"/>
+            <rect x="308" y="246" width="144" height="10" fill="#fffbeb"/>
+            <path d="M332 260 L332 272 Q332 277 337 279 Q342 277 342 272 L342 260 L337 256 Z" fill="none" stroke="#f59e0b" stroke-width="1.2"/>
+            <path d="M334 267 L336 270 L340 264" fill="none" stroke="#f59e0b" stroke-width="1.2" stroke-linecap="round"/>
+            <text x="380" y="250" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="10" font-weight="700" fill="#92400e">ASA Firewall</text>
+            <text x="352" y="263" font-family="'Segoe UI',sans-serif" font-size="9" fill="#64748b">Cisco ASA 5505</text>
+            <text x="352" y="274" font-family="'Segoe UI',sans-serif" font-size="9" fill="#64748b">Stateful inspection</text>
+            <text x="352" y="283" font-family="'Consolas',monospace" font-size="8" fill="#64748b">10.0.0.254 / 192.168.0.1</text>
+          </g>
+
+          <!-- FW to SW link -->
+          <line x1="380" y1="290" x2="380" y2="340" stroke="#94a3b8" stroke-width="2.5" stroke-dasharray="5 3"/>
+          <text x="392" y="318" font-family="'Segoe UI',sans-serif" font-size="9" fill="#94a3b8">Trunk</text>
+
+          <!-- CORE SWITCH -->
+          <g id="node-sw" filter="url(#drop-shadow)">
+            <rect x="300" y="340" width="160" height="48" rx="8" fill="#fff" stroke="#10b981" stroke-width="1.5"/>
+            <rect x="300" y="340" width="160" height="16" rx="8" fill="#f0fdf4"/>
+            <rect x="300" y="348" width="160" height="8" fill="#f0fdf4"/>
+            <!-- switch ports -->
+            <rect x="312" y="362" width="6" height="4" rx="1" fill="#10b981"/>
+            <rect x="321" y="362" width="6" height="4" rx="1" fill="#10b981"/>
+            <rect x="330" y="362" width="6" height="4" rx="1" fill="#10b981"/>
+            <rect x="339" y="362" width="6" height="4" rx="1" fill="#94a3b8"/>
+            <text x="380" y="352" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="10" font-weight="700" fill="#065f46">Core Switch — SW1</text>
+            <text x="360" y="364" font-family="'Segoe UI',sans-serif" font-size="9" fill="#64748b">Catalyst 3850-24T</text>
+            <text x="360" y="374" font-family="'Consolas',monospace" font-size="8" fill="#64748b">192.168.0.1 — L3</text>
+            <text x="360" y="383" font-family="'Segoe UI',sans-serif" font-size="8" fill="#64748b">VLANs: 10, 20, 30</text>
+          </g>
+
+          <!-- SW to hosts links -->
+          <line x1="340" y1="388" x2="170" y2="430" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <line x1="380" y1="388" x2="380" y2="430" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <line x1="420" y1="388" x2="590" y2="430" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 3"/>
+
+          <!-- PORT labels -->
+          <text x="245" y="416" font-family="'Segoe UI',sans-serif" font-size="8" fill="#94a3b8">Fa0/1 VLAN10</text>
+          <text x="385" y="416" font-family="'Segoe UI',sans-serif" font-size="8" fill="#94a3b8">Fa0/2 VLAN20</text>
+          <text x="500" y="416" font-family="'Segoe UI',sans-serif" font-size="8" fill="#94a3b8">Fa0/3 VLAN30</text>
+
+          <!-- HOST A -->
+          <g id="host-a">
+            <rect x="120" y="430" width="100" height="40" rx="6" fill="#fff" stroke="#cbd5e1" stroke-width="1.2"/>
+            <rect x="126" y="434" width="48" height="30" rx="3" fill="#f8fafc" stroke="#e2e8f0" stroke-width=".8"/>
+            <rect x="178" y="448" width="8" height="3" rx="1" fill="#94a3b8"/>
+            <rect x="184" y="451" width="16" height="1.5" rx="1" fill="#cbd5e1"/>
+            <text x="205" y="445" font-family="'Segoe UI',sans-serif" font-size="9" font-weight="600" fill="#334155">PC-A</text>
+            <text x="205" y="456" font-family="'Consolas',monospace" font-size="8" fill="#64748b">192.168.10.10</text>
+            <text x="205" y="466" font-family="'Segoe UI',sans-serif" font-size="8" fill="#94a3b8">VLAN 10</text>
+          </g>
+
+          <!-- SERVER B -->
+          <g id="host-b">
+            <rect x="330" y="430" width="100" height="40" rx="6" fill="#fff" stroke="#cbd5e1" stroke-width="1.2"/>
+            <rect x="336" y="434" width="22" height="30" rx="2" fill="#f8fafc" stroke="#e2e8f0" stroke-width=".8"/>
+            <rect x="338" y="437" width="18" height="5" rx="1" fill="#f1f5f9" stroke="#e2e8f0" stroke-width=".5"/>
+            <rect x="338" y="444" width="18" height="5" rx="1" fill="#f1f5f9" stroke="#e2e8f0" stroke-width=".5"/>
+            <circle cx="353" cy="439" r="1.5" fill="#10b981"/>
+            <circle cx="353" cy="446" r="1.5" fill="#94a3b8"/>
+            <text x="364" y="445" font-family="'Segoe UI',sans-serif" font-size="9" font-weight="600" fill="#334155">SRV-1</text>
+            <text x="364" y="456" font-family="'Consolas',monospace" font-size="8" fill="#64748b">192.168.20.10</text>
+            <text x="364" y="466" font-family="'Segoe UI',sans-serif" font-size="8" fill="#94a3b8">VLAN 20</text>
+          </g>
+
+          <!-- HOST C -->
+          <g id="host-c">
+            <rect x="540" y="430" width="100" height="40" rx="6" fill="#fff" stroke="#cbd5e1" stroke-width="1.2"/>
+            <rect x="546" y="434" width="48" height="30" rx="3" fill="#f8fafc" stroke="#e2e8f0" stroke-width=".8"/>
+            <rect x="598" y="448" width="8" height="3" rx="1" fill="#94a3b8"/>
+            <rect x="604" y="451" width="16" height="1.5" rx="1" fill="#cbd5e1"/>
+            <text x="625" y="445" font-family="'Segoe UI',sans-serif" font-size="9" font-weight="600" fill="#334155">PC-C</text>
+            <text x="625" y="456" font-family="'Consolas',monospace" font-size="8" fill="#64748b">192.168.30.10</text>
+            <text x="625" y="466" font-family="'Segoe UI',sans-serif" font-size="8" fill="#94a3b8">VLAN 30</text>
+          </g>
+
+          <!-- Packet layer -->
+          <g id="packets"></g>
+        </svg>
+
+        <div class="topo-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:#16a34a"></div> Permit</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#dc2626"></div> Deny</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#94a3b8;border-radius:2px;width:16px;height:3px"></div> Link</div>
+          <div class="legend-item" style="background:#fef3c7;border:1px solid #fcd34d;padding:2px 6px;border-radius:4px;font-size:10px;color:#d97706">▼ ACL Point</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PACKET SIM -->
+    <div id="rt-sim" style="display:none;flex:1;overflow-y:auto;padding:12px">
+      <div class="sim-grid">
+        <div><div class="flabel">Source IP</div><input type="text" id="s-src" value="192.168.1.10"></div>
+        <div><div class="flabel">Destination IP</div><input type="text" id="s-dst" value="10.0.0.5"></div>
+        <div><div class="flabel">Protocol</div><select id="s-proto"><option>ip</option><option>tcp</option><option>udp</option><option>icmp</option></select></div>
+        <div><div class="flabel">Dst Port</div><input type="text" id="s-port" value="80"></div>
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-bottom:10px;justify-content:center" onclick="simulate()">
+        <i class="ti ti-player-play"></i> Send Test Packet
+      </button>
+      <div id="s-result" class="result-box"><i class="ti ti-info-circle"></i>&nbsp;Build your ACL then send a test packet</div>
+      <div id="s-trace" class="trace"></div>
+      <div style="margin-top:12px">
+        <div class="flabel" style="margin-bottom:6px">Quick Tests</div>
+        <div class="quick-btns">
+          <button class="qbtn" onclick="qt('192.168.1.10','10.0.0.1','tcp','80')">HTTP .1.x→server</button>
+          <button class="qbtn" onclick="qt('10.0.0.5','172.16.0.1','tcp','23')">Telnet 10.x</button>
+          <button class="qbtn" onclick="qt('172.16.0.1','8.8.8.8','udp','53')">DNS 172.x</button>
+          <button class="qbtn" onclick="qt('192.168.1.100','10.0.0.1','tcp','22')">SSH attempt</button>
+          <button class="qbtn" onclick="qt('192.168.10.10','192.168.20.10','tcp','443')">HTTPS inter-VLAN</button>
+          <button class="qbtn" onclick="qt('8.8.8.8','192.168.1.1','icmp','')">ICMP WAN→LAN</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- BATCH TEST -->
+    <div id="rt-batch" style="display:none;flex:1;overflow-y:auto;padding:12px">
+      <div style="margin-bottom:10px">
+        <div class="flabel" style="margin-bottom:5px">Enter test packets — one per line: SRC_IP DST_IP PROTO PORT</div>
+        <textarea class="batch-input" id="batch-input" placeholder="192.168.1.10 10.0.0.1 tcp 80&#10;10.0.0.5 172.16.0.1 tcp 23&#10;172.16.0.1 8.8.8.8 udp 53&#10;192.168.1.100 10.0.0.1 tcp 22&#10;192.168.10.10 192.168.20.10 tcp 443"></textarea>
+      </div>
+      <button class="btn btn-primary" style="margin-bottom:10px" onclick="runBatch()"><i class="ti ti-stack"></i> Run All Tests</button>
+      <div id="batch-results"></div>
+    </div>
+
+    <!-- WILDCARD CALC -->
+    <div id="rt-wc" style="display:none;flex:1;overflow-y:auto;padding:12px">
+      <div style="display:flex;gap:8px;margin-bottom:10px;align-items:flex-end">
+        <div style="flex:1"><div class="flabel">Network Address</div><input type="text" id="wc-ip" placeholder="192.168.1.0" oninput="calcWC()"></div>
+        <div style="width:60px"><div class="flabel">/ Prefix</div><input type="text" id="wc-pfx" placeholder="24" oninput="calcWC()"></div>
+        <button class="btn btn-primary btn-sm" onclick="calcWC()">Calc</button>
+      </div>
+      <div class="quick-btns" style="margin-bottom:10px">
+        <button class="qbtn" onclick="swc('192.168.1.0','24')">192.168.1.0/24</button>
+        <button class="qbtn" onclick="swc('10.0.0.0','8')">10.0.0.0/8</button>
+        <button class="qbtn" onclick="swc('172.16.0.0','12')">172.16.0.0/12</button>
+        <button class="qbtn" onclick="swc('10.10.0.0','16')">10.10.0.0/16</button>
+      </div>
+      <div id="wc-result" style="display:none">
+        <div class="wc-grid">
+          <div class="wc-card"><div class="wc-label">Subnet Mask</div><div class="wc-val" id="wv-sub">-</div></div>
+          <div class="wc-card"><div class="wc-label">Wildcard Mask</div><div class="wc-val" id="wv-wc">-</div></div>
+          <div class="wc-card"><div class="wc-label">Network Address</div><div class="wc-val" id="wv-net" style="font-size:12px">-</div></div>
+          <div class="wc-card"><div class="wc-label">Usable Hosts</div><div class="wc-val" id="wv-hc">-</div></div>
+        </div>
+        <div class="flabel" style="margin-bottom:5px">Bit Map — <span style="color:var(--blue)">Blue = Network</span> / <span style="color:var(--amber)">Amber = Host</span></div>
+        <div id="wc-bits" class="bits"></div>
+        <div class="wc-syntax" id="wv-syn">-</div>
+      </div>
+      <div class="shortcut-grid">
+        <div class="shortcut"><div class="k">host 10.0.0.1</div><div class="v">= 10.0.0.1 0.0.0.0 (exact match)</div></div>
+        <div class="shortcut"><div class="k">any</div><div class="v">= 0.0.0.0 255.255.255.255 (all IPs)</div></div>
+        <div class="shortcut"><div class="k">0.0.0.0 0.255.255.255</div><div class="v">matches all 0.x.x.x (/8)</div></div>
+        <div class="shortcut"><div class="k">0.0.0.0 0.0.255.255</div><div class="v">matches last 2 octets (/16)</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ---- STATE ----
+let aclType='standard', aces=[], hits={p:0,d:0}, formOpen=false;
+let dragSrc=null;
+
+// ---- CLOCK ----
+setInterval(()=>{
+  const n=new Date(),p=x=>String(x).padStart(2,'0');
+  document.getElementById('clock').textContent=p(n.getHours())+':'+p(n.getMinutes())+':'+p(n.getSeconds());
+},1000);
+
+// ---- URL SHARE ----
+function shareACL(){
+  const state={type:aclType,aces,name:document.getElementById('acl-name').value};
+  const encoded=btoa(JSON.stringify(state));
+  const url=window.location.origin+window.location.pathname+'?acl='+encoded;
+  navigator.clipboard.writeText(url).catch(()=>{});
+  showToast('Share link copied to clipboard!');
+}
+function loadFromURL(){
+  const p=new URLSearchParams(window.location.search);
+  if(!p.has('acl'))return;
+  try{
+    const s=JSON.parse(atob(p.get('acl')));
+    aclType=s.type||'standard';
+    aces=s.aces||[];
+    if(s.name)document.getElementById('acl-name').value=s.name;
+    const tabs=document.querySelectorAll('.type-tab');
+    const idx=['standard','extended','named'].indexOf(aclType);
+    tabs.forEach((t,i)=>t.classList.toggle('on',i===idx));
+    document.getElementById('st-type').textContent=aclType.charAt(0).toUpperCase()+aclType.slice(1);
+    updateExtFields();
+    renderACL(); updateCLI();
+    showToast('ACL loaded from shared link!');
+  }catch(e){}
+}
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+// ---- TABS ----
+function leftTab(id,btn){
+  ['editor','cli','scenarios','mistakes'].forEach(t=>{
+    const el=document.getElementById('lt-'+t);
+    if(el)el.style.display=t===id?(t==='editor'?'flex':'flex'):'none';
+    if(el)el.style.flexDirection='column';
+  });
+  document.querySelectorAll('.left-col .tab').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  if(id==='cli')updateCLI();
+}
+
+function rightTab(id,btn){
+  ['topo','sim','batch','wc'].forEach(t=>{
+    const el=document.getElementById('rt-'+t);
+    if(el)el.style.display=t===id?'flex':'none';
+    if(el&&t===id)el.style.flexDirection='column';
+  });
+  document.querySelectorAll('.right-col .tab').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+}
+
+// ---- ACL TYPE ----
+function setType(t,btn){
+  aclType=t;
+  document.querySelectorAll('.type-tab').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  document.getElementById('st-type').textContent=t.charAt(0).toUpperCase()+t.slice(1);
+  document.getElementById('named-row').style.display=t==='named'?'block':'none';
+  updateExtFields();
+  renderACL(); updateCLI();
+}
+function updateExtFields(){
+  const isExt=aclType==='extended'||aclType==='named';
+  ['fw-proto','fw-sport','fw-dport','fw-dstwc','fw-dst'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)el.style.display=isExt?'':'none';
+  });
+}
+
+// ---- FORM ----
+function toggleForm(){
+  formOpen=!formOpen;
+  document.getElementById('add-form').classList.toggle('show',formOpen);
+}
+
+function addACE(){
+  const isExt=aclType==='extended'||aclType==='named';
+  aces.push({
+    action:document.getElementById('f-action').value,
+    proto:isExt?document.getElementById('f-proto').value:'ip',
+    src:document.getElementById('f-src').value.trim()||'any',
+    srcwc:document.getElementById('f-srcwc').value.trim(),
+    dst:isExt?(document.getElementById('f-dst').value.trim()||'any'):'any',
+    dstwc:isExt?document.getElementById('f-dstwc').value.trim():'',
+    sport:isExt?document.getElementById('f-sport').value:'',
+    dport:isExt?document.getElementById('f-dport').value:'',
+    remark:document.getElementById('f-remark').value.trim()
+  });
+  renderACL(); updateCLI(); toggleForm();
+  document.getElementById('f-remark').value='';
+}
+
+function removeACE(i){aces.splice(i,1);renderACL();updateCLI();}
+
+function clearACL(){
+  aces=[];hits={p:0,d:0};
+  renderACL();updateCLI();
+  document.getElementById('s-result').className='result-box';
+  document.getElementById('s-result').innerHTML='<i class="ti ti-info-circle"></i>&nbsp;Build your ACL then send a test packet';
+  document.getElementById('s-trace').style.display='none';
+  updateStats();
+}
+
+// ---- SHADOW DETECTION ----
+function checkShadows(){
+  const shadowed=new Array(aces.length).fill(false);
+  for(let i=0;i<aces.length;i++){
+    for(let j=0;j<i;j++){
+      if(isShadowedBy(aces[i],aces[j])){shadowed[i]=true;break;}
+    }
+  }
+  const hasShadow=shadowed.some(Boolean);
+  const alert=document.getElementById('shadow-alert');
+  alert.classList.toggle('show',hasShadow);
+  if(hasShadow){
+    const count=shadowed.filter(Boolean).length;
+    document.getElementById('shadow-msg').textContent=count+' rule'+(count>1?'s are':' is')+' shadowed and will never be reached.';
+  }
+  return shadowed;
+}
+
+function isShadowedBy(ace,prev){
+  // prev action must catch everything ace would catch
+  const srcCovers=coversRange(prev.src,prev.srcwc,ace.src,ace.srcwc);
+  const dstCovers=coversRange(prev.dst||'any',prev.dstwc||'',ace.dst||'any',ace.dstwc||'');
+  const protoCovers=prev.proto==='ip'||prev.proto===ace.proto;
+  const portCovers=!prev.dport||prev.dport===ace.dport;
+  return srcCovers&&dstCovers&&protoCovers&&portCovers;
+}
+
+function coversRange(netA,wcA,netB,wcB){
+  if(netA==='any')return true;
+  if(netB==='any'&&netA!=='any')return false;
+  // simplified: if both same network and wcA is same or broader
+  if(!wcA&&!wcB)return netA===netB;
+  return netA===netB&&wcA===wcB; // simplified check
+}
+
+// ---- RENDER ----
+function renderACL(){
+  const list=document.getElementById('ace-list');
+  list.innerHTML='';
+  const shadowed=checkShadows();
+  let seq=10;
+  aces.forEach((a,i)=>{
+    const src=a.src==='any'?'any':(a.srcwc?a.src+' '+a.srcwc:'host '+a.src);
+    const dst=a.dst==='any'?'any':(a.dstwc?a.dst+' '+a.dstwc:'host '+a.dst);
+    const dp=a.dport||'—';
+    const d=document.createElement('div');
+    d.className='ace-item '+(a.action==='permit'?'permit-rule':'deny-rule')+(shadowed[i]?' shadowed':'');
+    d.id='ace-'+i;
+    d.draggable=true;
+    d.innerHTML=
+      '<div class="seq">'+seq+'</div>'+
+      '<div class="abadge '+a.action+'">'+a.action.toUpperCase()+'</div>'+
+      '<div class="afield">'+a.proto+' '+src+'</div>'+
+      '<div class="afield">'+dst+'</div>'+
+      '<div class="afield muted">'+dp+'</div>'+
+      '<button class="xbtn" onclick="removeACE('+i+')" title="Remove"><i class="ti ti-x"></i></button>';
+    if(a.remark){
+      const r=document.createElement('div');
+      r.style.cssText='grid-column:1/-1;font-size:10px;color:var(--text3);font-style:italic;padding:0 2px';
+      r.textContent='! '+a.remark; d.appendChild(r);
+    }
+    if(shadowed[i]){
+      const w=document.createElement('div');
+      w.className='shadow-warn';
+      w.innerHTML='<i class="ti ti-alert-triangle" style="font-size:11px"></i> Shadowed by rule '+(aces.findIndex((x,j)=>j<i&&isShadowedBy(a,x))*10+10);
+      d.appendChild(w);
+    }
+    // drag events
+    d.addEventListener('dragstart',e=>{dragSrc=i;d.classList.add('dragging');e.dataTransfer.effectAllowed='move';});
+    d.addEventListener('dragend',()=>d.classList.remove('dragging'));
+    d.addEventListener('dragover',e=>{e.preventDefault();d.classList.add('drag-over');});
+    d.addEventListener('dragleave',()=>d.classList.remove('drag-over'));
+    d.addEventListener('drop',e=>{
+      e.preventDefault();d.classList.remove('drag-over');
+      if(dragSrc!==null&&dragSrc!==i){
+        const moved=aces.splice(dragSrc,1)[0];
+        aces.splice(i,0,moved);
+        renderACL();updateCLI();
+      }
+    });
+    list.appendChild(d);
+    seq+=10;
+  });
+  updateStats();
+}
+
+function updateStats(){
+  document.getElementById('st-aces').textContent=aces.length;
+  document.getElementById('st-permits').textContent=hits.p;
+  document.getElementById('st-denies').textContent=hits.d;
+}
+
+// ---- IP MATCHING ----
+function ip2n(ip){
+  if(!ip||ip==='any')return null;
+  const p=ip.split('.').map(Number);
+  return p.length===4?(p[0]<<24|p[1]<<16|p[2]<<8|p[3])>>>0:null;
+}
+function ipMatch(test,net,wc){
+  if(net==='any')return true;
+  if(net.startsWith('host '))return test===net.slice(5);
+  const tn=ip2n(test),nn=ip2n(net);
+  if(tn===null||nn===null)return false;
+  if(!wc||wc==='0.0.0.0')return tn===nn;
+  const wn=ip2n(wc);
+  return((tn&~wn)>>>0)===((nn&~wn)>>>0);
+}
+
+function evalPacket(src,dst,proto,port){
+  for(let i=0;i<aces.length;i++){
+    const a=aces[i];
+    const sm=ipMatch(src,a.src,a.srcwc);
+    const dm=ipMatch(dst,a.dst||'any',a.dstwc||'');
+    const pm=a.proto==='ip'||a.proto===proto||proto==='ip';
+    let ptm=true;
+    if(a.dport&&port){
+      const pts=a.dport.split(' ');
+      if(pts[0]==='eq')ptm=port===pts[1];
+      else if(pts[0]==='gt')ptm=parseInt(port)>parseInt(pts[1]);
+      else if(pts[0]==='lt')ptm=parseInt(port)<parseInt(pts[1]);
+    }
+    if(sm&&dm&&pm&&ptm)return{action:a.action,idx:i};
+  }
+  return{action:'deny',idx:null};
+}
+
+// ---- SIMULATE ----
+function simulate(){
+  const src=document.getElementById('s-src').value.trim();
+  const dst=document.getElementById('s-dst').value.trim();
+  const proto=document.getElementById('s-proto').value;
+  const port=document.getElementById('s-port').value.trim();
+  const trace=document.getElementById('s-trace');
+  const res=document.getElementById('s-result');
+  trace.style.display='block';
+  trace.innerHTML='<span class="tl-info">--- Trace: '+src+' → '+dst+' ['+proto+(port?' :'+port:'')+'] ---</span>\n';
+  document.querySelectorAll('.ace-item').forEach(e=>e.classList.remove('flash-match'));
+
+  if(aces.length===0){
+    trace.innerHTML+='<span class="tl-check">  No ACEs configured</span>\n<span class="tl-deny">  → implicit DENY any</span>';
+    res.className='result-box deny';res.innerHTML='<i class="ti ti-ban"></i>&nbsp;<b>DENY</b> — implicit deny (no rules configured)';
+    hits.d++;updateStats();spawnPacket(src,dst,'deny');return;
+  }
+
+  let seq=10;
+  for(let i=0;i<aces.length;i++){
+    const a=aces[i];
+    trace.innerHTML+='<span class="tl-check">  seq '+seq+': check '+a.action+' '+a.proto+' src='+a.src+(a.srcwc?' '+a.srcwc:'')+'</span>\n';
+    seq+=10;
+  }
+
+  const{action,idx}=evalPacket(src,dst,proto,port);
+
+  if(idx!==null){
+    const el=document.getElementById('ace-'+idx);
+    if(el){el.classList.add('flash-match');}
+    trace.innerHTML+=(action==='permit'?'<span class="tl-permit">':'<span class="tl-deny">')+'  → MATCHED seq '+(10+idx*10)+': '+action.toUpperCase()+'</span>';
+  } else {
+    trace.innerHTML+='<span class="tl-deny">  → No match: implicit DENY</span>';
+  }
+
+  if(action==='permit'){
+    res.className='result-box permit';res.innerHTML='<i class="ti ti-circle-check"></i>&nbsp;<b>PERMIT</b>'+(idx!==null?' — matched ACE seq '+(10+idx*10):'');
+    hits.p++;
+  } else {
+    res.className='result-box deny';res.innerHTML='<i class="ti ti-ban"></i>&nbsp;<b>DENY</b>'+(idx!==null?' — matched ACE seq '+(10+idx*10):' — implicit deny');
+    hits.d++;
+  }
+  updateStats();updateCLI();
+  spawnPacket(src,dst,action);
+}
+
+function qt(s,d,p,pt){
+  document.getElementById('s-src').value=s;
+  document.getElementById('s-dst').value=d;
+  document.getElementById('s-proto').value=p;
+  document.getElementById('s-port').value=pt;
+  const simTab=document.querySelector('.right-col .tab:nth-child(2)');
+  if(simTab&&!simTab.classList.contains('on'))rightTab('sim',simTab);
+  simulate();
+}
+
+// ---- BATCH TEST ----
+function runBatch(){
+  const lines=document.getElementById('batch-input').value.trim().split('\n').filter(l=>l.trim());
+  if(!lines.length)return;
+  const rows=lines.map(line=>{
+    const p=line.trim().split(/\s+/);
+    const src=p[0]||'any',dst=p[1]||'any',proto=p[2]||'ip',port=p[3]||'';
+    const{action,idx}=evalPacket(src,dst,proto,port);
+    return{src,dst,proto,port,action,seq:idx!==null?10+idx*10:'implicit'};
+  });
+  const permits=rows.filter(r=>r.action==='permit').length;
+  const denies=rows.filter(r=>r.action==='deny').length;
+  let html='<div style="display:flex;gap:12px;margin-bottom:8px;font-size:12px">'+
+    '<span style="color:var(--green);font-weight:600"><i class="ti ti-check"></i> '+permits+' PERMIT</span>'+
+    '<span style="color:var(--red);font-weight:600"><i class="ti ti-ban"></i> '+denies+' DENY</span>'+
+    '<span style="color:var(--text2)">'+rows.length+' total</span></div>';
+  html+='<div style="overflow-x:auto"><table class="batch-table"><thead><tr><th>Source</th><th>Destination</th><th>Proto</th><th>Port</th><th>Result</th><th>ACE</th></tr></thead><tbody>';
+  rows.forEach(r=>{
+    html+='<tr><td>'+r.src+'</td><td>'+r.dst+'</td><td>'+r.proto+'</td><td>'+(r.port||'—')+'</td>'+
+      '<td class="result-'+(r.action)+'">'+r.action.toUpperCase()+'</td>'+
+      '<td style="color:var(--text3)">'+r.seq+'</td></tr>';
+  });
+  html+='</tbody></table></div>';
+  document.getElementById('batch-results').innerHTML=html;
+}
+
+// ---- TOPOLOGY ANIMATION ----
+const wp={
+  wan:{x:380,y:48},r1:{x:380,y:157},acl:{x:380,y:100},
+  fw:{x:380,y:264},sw:{x:380,y:364},
+  ha:{x:170,y:450},hb:{x:380,y:450},hc:{x:590,y:450}
+};
+
+function spawnPacket(srcIp,dstIp,action){
+  const svg=document.getElementById('packets');
+  const color=action==='permit'?'#16a34a':'#dc2626';
+  const path=buildPath(dstIp,action);
+  if(!path||path.length<2)return;
+
+  const circle=document.createElementNS('http://www.w3.org/2000/svg','circle');
+  circle.setAttribute('r','6');
+  circle.setAttribute('fill',color);
+  circle.setAttribute('opacity','0.85');
+  const glow=document.createElementNS('http://www.w3.org/2000/svg','circle');
+  glow.setAttribute('r','10');
+  glow.setAttribute('fill',color);
+  glow.setAttribute('opacity','0.2');
+  const g=document.createElementNS('http://www.w3.org/2000/svg','g');
+  g.appendChild(glow);g.appendChild(circle);
+  svg.appendChild(g);
+
+  let step=0;
+  function animate(){
+    if(step>=path.length){svg.removeChild(g);return;}
+    const p=path[step];
+    g.setAttribute('transform','translate('+p.x+','+p.y+')');
+    // flash ACL badge
+    if(step===2){
+      const b=document.getElementById('acl-badge');
+      if(b){b.style.fill=action==='permit'?'#dcfce7':'#fee2e2';b.style.stroke=color;setTimeout(()=>{b.style.fill='#fef3c7';b.style.stroke='#fcd34d';},400);}
+    }
+    step++;
+    setTimeout(animate,step<3?90:55);
+  }
+  animate();
+}
+
+function buildPath(dstIp,action){
+  let path=[wp.wan,wp.r1,wp.acl,wp.r1];
+  if(action==='deny'){path.push({x:380,y:120},{x:380,y:76});return path;}
+  path.push(wp.fw,wp.sw);
+  if(dstIp&&dstIp.startsWith('192.168.10'))path.push(wp.ha);
+  else if(dstIp&&dstIp.startsWith('192.168.20'))path.push(wp.hb);
+  else if(dstIp&&dstIp.startsWith('192.168.30'))path.push(wp.hc);
+  else path.push(wp.hb);
+  return path;
+}
+
+// auto-demo
+setInterval(()=>{
+  if(aces.length===0)return;
+  const tests=[
+    ['192.168.10.10','192.168.20.10','tcp','80'],
+    ['10.0.0.5','192.168.1.1','tcp','23'],
+    ['172.16.0.1','8.8.8.8','udp','53'],
+    ['192.168.30.10','192.168.20.10','tcp','443']
+  ];
+  const t=tests[Math.floor(Math.random()*tests.length)];
+  const{action}=evalPacket(t[0],t[1],t[2],t[3]);
+  spawnPacket(t[0],t[1],action);
+},3800);
+
+// ---- WILDCARD CALC ----
+function calcWC(){
+  const ip=document.getElementById('wc-ip').value.trim();
+  const pfx=parseInt(document.getElementById('wc-pfx').value.trim());
+  if(!ip||isNaN(pfx)||pfx<0||pfx>32)return;
+  const sm=pfx===0?0:(~0<<(32-pfx))>>>0;
+  const wc=(~sm)>>>0;
+  function n2ip(n){return[(n>>24)&255,(n>>16)&255,(n>>8)&255,n&255].join('.');}
+  const net=(ip2n(ip)&sm)>>>0;
+  const bc=(net|wc)>>>0;
+  const hc=pfx>=31?Math.pow(2,32-pfx):Math.pow(2,32-pfx)-2;
+  document.getElementById('wc-result').style.display='block';
+  document.getElementById('wv-sub').textContent=n2ip(sm);
+  document.getElementById('wv-wc').textContent=n2ip(wc);
+  document.getElementById('wv-net').textContent=n2ip(net)+' → '+n2ip(bc);
+  document.getElementById('wv-hc').textContent=Math.round(hc).toLocaleString();
+  const wcStr=n2ip(wc),netStr=n2ip(net);
+  const syn=pfx===32?'host '+ip:wcStr==='255.255.255.255'?'any':netStr+' '+wcStr;
+  document.getElementById('wv-syn').textContent='permit ip '+syn+' any';
+  const be=document.getElementById('wc-bits');be.innerHTML='';
+  for(let i=31;i>=0;i--){
+    if([23,15,7].includes(i)){const s=document.createElement('div');s.className='bsep';be.appendChild(s);}
+    const b=document.createElement('div');
+    b.className='bit '+(31-i<pfx?'n':'h');
+    b.textContent=(sm>>i)&1;
+    be.appendChild(b);
+  }
+}
+function swc(ip,pfx){document.getElementById('wc-ip').value=ip;document.getElementById('wc-pfx').value=pfx;calcWC();}
+
+// ---- CLI ----
+function updateCLI(){
+  const el=document.getElementById('cli-box');
+  const aclNum=aclType==='extended'?100:1;
+  const isNamed=aclType==='named';
+  const ni=document.getElementById('acl-name');
+  const name=isNamed&&ni?(ni.value.trim()||'MY_ACL'):null;
+  let h='<span class="cl cl-prompt">R1#show ip access-lists</span>';
+  if(aces.length===0){
+    h+='<span class="cl cl-comment">% No access list configured</span>';
+  } else {
+    h+='<span class="cl"><span class="cl-keyword">'+(isNamed?'Extended IP access list ':(aclType==='extended'?'Extended IP access list ':'Standard IP access list '))+'</span><span class="cl-num">'+(isNamed?name:aclNum)+'</span></span>';
+    let seq=10;
+    aces.forEach(a=>{
+      const src=a.src==='any'?'any':(a.srcwc?a.src+' '+a.srcwc:'host '+a.src);
+      const dst=a.dst==='any'?'any':(a.dstwc?a.dst+' '+a.dstwc:'host '+a.dst);
+      const pstr=aclType==='standard'?'':a.proto+' ';
+      const dp=a.dport?' '+a.dport:'';
+      if(a.remark)h+='<span class="cl cl-comment">    remark '+a.remark+'</span>';
+      h+='<span class="cl">    <span class="cl-num">'+seq+'</span> <span class="'+(a.action==='permit'?'cl-permit':'cl-deny')+'">'+a.action+'</span> '+pstr+src+(aclType!=='standard'?' '+dst:'')+dp+'</span>';
+      seq+=10;
+    });
+    h+='<span class="cl cl-comment">    (implicit) deny any</span>';
+  }
+  h+='<span class="cl">&nbsp;</span><span class="cl cl-prompt">R1#<span class="cl-cursor"></span></span>';
+  el.innerHTML=h;
+}
+
+function copyConfig(){
+  const lines=['!','! Cisco ACL Lab — Generated Config','!'];
+  const aclNum=aclType==='extended'?100:1;
+  const isNamed=aclType==='named';
+  const ni=document.getElementById('acl-name');
+  const name=isNamed&&ni?(ni.value.trim()||'MY_ACL'):null;
+  if(isNamed)lines.push('ip access-list extended '+name);
+  let seq=10;
+  aces.forEach(a=>{
+    const src=a.src==='any'?'any':(a.srcwc?a.src+' '+a.srcwc:'host '+a.src);
+    const dst=a.dst==='any'?'any':(a.dstwc?a.dst+' '+a.dstwc:'host '+a.dst);
+    const pstr=aclType==='standard'?'':a.proto+' ';
+    const dp=a.dport?' '+a.dport:'';
+    if(a.remark)lines.push((isNamed?' ':'')+' remark '+a.remark);
+    if(isNamed)lines.push(' '+seq+' '+a.action+' '+pstr+src+' '+dst+dp);
+    else lines.push('access-list '+aclNum+' '+a.action+' '+pstr+src+(aclType!=='standard'?' '+dst:'')+dp);
+    seq+=10;
+  });
+  lines.push('!','interface GigabitEthernet0/0',' ip access-group '+(isNamed?name:aclNum)+' in','!');
+  navigator.clipboard.writeText(lines.join('\n')).catch(()=>{});
+  showToast('IOS config copied!');
+}
+
+// ---- SCENARIOS ----
+const scenarios=[
+  {name:'Block Telnet to Servers',desc:'Deny TCP 23 to 10.0.0.0/24 — enforce SSH only',tag:'ext',type:'extended',nn:'',rules:[
+    {action:'deny',proto:'tcp',src:'any',srcwc:'',dst:'10.0.0.0',dstwc:'0.0.0.255',sport:'',dport:'eq 23',remark:'No Telnet — use SSH'},
+    {action:'permit',proto:'ip',src:'any',srcwc:'',dst:'any',dstwc:'',sport:'',dport:'',remark:'Permit all other traffic'}
+  ]},
+  {name:'Management Access Only',desc:'Only 192.168.100.0/24 admin network permitted',tag:'std',type:'standard',nn:'',rules:[
+    {action:'permit',proto:'ip',src:'192.168.100.0',srcwc:'0.0.0.255',dst:'any',dstwc:'',sport:'',dport:'',remark:'Admin VLAN only'}
+  ]},
+  {name:'Web Traffic Named ACL',desc:'Named ACL: HTTP/HTTPS only, deny everything else',tag:'nm',type:'named',nn:'PERMIT_WEB',rules:[
+    {action:'permit',proto:'tcp',src:'any',srcwc:'',dst:'any',dstwc:'',sport:'',dport:'eq 80',remark:'Allow HTTP'},
+    {action:'permit',proto:'tcp',src:'any',srcwc:'',dst:'any',dstwc:'',sport:'',dport:'eq 443',remark:'Allow HTTPS'},
+    {action:'deny',proto:'ip',src:'any',srcwc:'',dst:'any',dstwc:'',sport:'',dport:'',remark:'Block everything else'}
+  ]},
+  {name:'Block RFC1918 on WAN',desc:'Drop spoofed private IPs on WAN ingress interface',tag:'ext',type:'extended',nn:'',rules:[
+    {action:'deny',proto:'ip',src:'10.0.0.0',srcwc:'0.255.255.255',dst:'any',dstwc:'',sport:'',dport:'',remark:'Block 10.0.0.0/8'},
+    {action:'deny',proto:'ip',src:'172.16.0.0',srcwc:'0.15.255.255',dst:'any',dstwc:'',sport:'',dport:'',remark:'Block 172.16.0.0/12'},
+    {action:'deny',proto:'ip',src:'192.168.0.0',srcwc:'0.0.255.255',dst:'any',dstwc:'',sport:'',dport:'',remark:'Block 192.168.0.0/16'},
+    {action:'permit',proto:'ip',src:'any',srcwc:'',dst:'any',dstwc:'',sport:'',dport:'',remark:'Allow all other'}
+  ]},
+  {name:'Block Inter-VLAN Access',desc:'Prevent VLAN10 from reaching server farm VLAN20',tag:'ext',type:'extended',nn:'',rules:[
+    {action:'deny',proto:'ip',src:'192.168.10.0',srcwc:'0.0.0.255',dst:'192.168.20.0',dstwc:'0.0.0.255',sport:'',dport:'',remark:'Block VLAN10 to VLAN20'},
+    {action:'permit',proto:'ip',src:'any',srcwc:'',dst:'any',dstwc:'',sport:'',dport:'',remark:'Permit rest'}
+  ]}
+];
+
+function loadScenario(i){
+  const s=scenarios[i];
+  document.querySelectorAll('.scenario').forEach((c,j)=>c.classList.toggle('active',j===i));
+  const tabs=document.querySelectorAll('.type-tab');
+  const ti=['standard','extended','named'].indexOf(s.type);
+  aclType=s.type;
+  tabs.forEach((b,j)=>b.classList.toggle('on',j===(ti>=0?ti:0)));
+  document.getElementById('st-type').textContent=s.type.charAt(0).toUpperCase()+s.type.slice(1);
+  document.getElementById('named-row').style.display=s.type==='named'?'block':'none';
+  if(s.type==='named'&&s.nn)document.getElementById('acl-name').value=s.nn;
+  updateExtFields();
+  aces=s.rules.map(r=>Object.assign({},r));
+  hits={p:0,d:0};
+  renderACL();updateCLI();
+}
+
+function renderScenarios(){
+  const el=document.getElementById('sc-list');el.innerHTML='';
+  const icons={standard:'ti-shield',extended:'ti-shield-check',named:'ti-shield-star'};
+  scenarios.forEach((s,i)=>{
+    const d=document.createElement('div');d.className='scenario';d.onclick=()=>loadScenario(i);
+    d.innerHTML='<i class="ti '+(icons[s.type]||'ti-shield')+' sc-icon"></i>'+
+      '<div><div class="sc-name">'+s.name+'</div><div class="sc-desc">'+s.desc+'</div>'+
+      '<span class="sc-tag '+s.tag+'">'+s.tag.toUpperCase()+'</span></div>';
+    el.appendChild(d);
+  });
+}
+
+// ---- INIT ----
+updateExtFields();
+renderScenarios();
+updateCLI();
+loadScenario(0);
+loadFromURL();
+</script>
+</body>
+</html>
